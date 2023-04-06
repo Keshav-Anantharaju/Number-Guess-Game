@@ -1,0 +1,49 @@
+#!/bin/bash
+PSQL="psql --username=freecodecamp --dbname=postgres -t --no-align -c"
+echo -e "\nEnter your username: \n"
+read USER_NAME
+GAMES_PLAYED="$($PSQL "SELECT games_played FROM users WHERE username='$USER_NAME'")"
+if [[ -z $GAMES_PLAYED ]]
+then 
+  echo "Welcome, $USER_NAME! It looks like this is your first time here."
+  FLAG=0
+else
+  B_GAME="$($PSQL "SELECT best_game FROM users WHERE username='$USER_NAME'")"
+  echo "Welcome back, $USER_NAME! You have played $GAMES_PLAYED games, and your best game took $B_GAME guesses."
+  FLAG=1
+fi
+RAND_NUMBER=$(( $RANDOM % 1000 + 1 ))
+GUESSES=0
+echo $RAND_NUMBER
+echo "Guess the secret number between 1 and 1000:"
+while [[ $INPUT != $RAND_NUMBER ]]
+do
+  read INPUT
+  GUESSES=$(( $GUESSES + 1 ))
+  if [[ ! $INPUT =~ ^[0-9]*$ ]]
+  then
+    echo "That is not an integer, guess again:"
+  else 
+    if [[ $RAND_NUMBER -lt  $INPUT ]]
+    then
+      echo "It's lower than that, guess again:"
+    fi
+    if [[ $RAND_NUMBER -gt  $INPUT ]]
+    then 
+      echo "It's higher than that, guess again:"
+    fi
+  fi
+done
+if [[ $FLAG == 1 ]]
+then 
+  GAMES_PLAYED=$(( $GAMES_PLAYED + 1 ))
+  if [[ $B_GAME -gt $GUESSES ]]
+  then 
+    INSERT_RESULT="$($PSQL "UPDATE users SET games_played=$GAMES_PLAYED, best_game=$GUESSES where username='$USER_NAME'")"
+  else
+    INSERT_RESULT="$($PSQL "UPDATE users SET games_played=$GAMES_PLAYED, best_game=$B_GAME where username='$USER_NAME'")"
+  fi
+else
+  INSERT_RESULT="$($PSQL "INSERT INTO users(username,games_played,best_game) VALUES('$USER_NAME',1,$GUESSES)")"
+fi
+echo "You guessed it in $GUESSES tries. The secret number was $RAND_NUMBER. Nice job!"
